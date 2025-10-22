@@ -8,7 +8,7 @@ tags:
 For a second imagine (I know it might be hard, you've got this) that you are on an epic mission to survey the mountain ranges of Mars. This is a dangerous mission, so you send your trusty rover named [[the-mars-rover|Spike]] to safely stare at rocks and take cute selfies up and over these mountain ranges.
 
 ![[base-station.png]]
-There's an issue though, we can't enjoy our mountain movie if our antennas cannot talk to each other. This can certainly happen when our rover is out of range, or more specifically, [[NLOS|not in line of site]].  When we leave line of site our radio waves tend not to be able to travel very well through the rough martian terrain, so we need to figure out how to extend our range. 
+There's an issue though, we can't enjoy our mountain movie if our antennas cannot talk to each other. This can certainly happen when our rover is out of range, or more specifically, [[NLOS|not in line of sight]].  When we leave line of site our radio waves tend not to be able to travel very well through the rough martian terrain, so we need to figure out how to extend our range. 
 
 
 ![[Pasted image 20251008175545.png]]
@@ -48,11 +48,11 @@ I wish, this shit is way more complicated. But nothing to be discouraged by. Let
 
 In the most trivial configuration we have two happy nodes A (the base station) and C (the rover). We have perfect line of sight, no obstructions, everyone is happy, data is flying over the air.
 ![[Pasted image 20251021215059.png]]
-But life is misreable and like Buddism tells us, all suffering. We have lost all line of sight, there no possibllity of getting our data through this obstruction (realistically at least). But what if...
+But life is miserable and like Buddhism tells us, life is suffering. We have lost all line of sight, there no possibility of getting our data through this obstruction (realistically at least). But what if...
 ![[Pasted image 20251021215113.png]]
 we added a intermidate relay node (B) to relay any messages it catches from the rover back to the base station! Alright, job done, our obstructions have been navigated with careful relay placement and a smart routing syst...
 ![[Pasted image 20251021215138.png]]
-Fuckkkkk. So theres a limitation to what we can do reliably due to this system having a hidden node. Node A is aware of B and it's timing of messages, C is aware of A's existence, and B of course knows about both A and C. But the problem is that A is not aware of C and vice versa. This means that both A and C might try to send signals to B simultaneously leading to race conditions, dropping entire packets. This is the hidden node problem, and is something that is difficult to solve effeciently simply with software. One such way is through TDMA which is a protocol/mechanism in which each node is assigned a schedule of when it can send and cannot send. This ensures that A and C never send B data at the same time. Unfortunetly this is not an option for us to implment on the existing system (yet...) .
+Fuckkkkk. So there's a limitation to what we can do reliably due to this system having a hidden node. Node A is aware of B and it's timing of messages, C is aware of A's existence, and B of course knows about both A and C. But the problem is that A is not aware of C and vice versa. This means that both A and C might try to send signals to B simultaneously leading to race conditions, dropping entire packets. This is the hidden node problem, and is something that is difficult to solve efficiently simply with software. One such way is through TDMA (time division multiple access) which is a mechanism in which each node is assigned a schedule of when it can send and cannot send. This ensures that A and C never send B data at the same time. Unfortunately this is not an option for us to implement on the existing system (yet...) .
 ![[Pasted image 20251021215152.png]]
 To solve this hidden node problem we simply set up two radios on the relay, both dedicated to receiving (and transmitting) from only one each. By still being able to capture from both sides we can simply buffer the packets on our controller driving the radios and process two streams asynchronously. This does come at a few challenges where we need to source a device with slots for 2 radios (or two built in), and buy 2 radios, and 2 antennas for the one relay. So a little more expensive, and a little more complex, but way more robust, which for mission critical features like communication is vital.
 ![[Pasted image 20251021215207.png]]
@@ -79,7 +79,7 @@ Out of curiosity I dug into what processor is running on this artefact. The boar
 
 ### The Intel XScale IXP425 Processor
 ![[Pasted image 20251021184924.png]]
-As most modern processors do, the SoC contains pretty standard peripheral busses, a PCI controller (not to be mistaken with PCI-e). But intrestegly it has a special UTOPIA network processor. UTOPIA is actual a standard interface called _Universal Test and Operation PHY Interface for ATM_. It defines a full-duplex bus with seperate data and control lines for networks that use the ATM (Async Transfer Mode) standard. It enabled connecting ATM based network equipment. For example you could hook up multiple DSPs on one bus in a way that they will understand each other using ATM. In the case of our gateway product, this feature was not used. With this bus we could have a DSP connecting as a coprocessor to perform extra tasks to offload from the main processor and NPEs (network processing engines). The network processing engines have the capability to do AES and the now defunct MD5. 
+As most modern processors do, the SoC contains pretty standard peripheral busses, a PCI controller (not to be mistaken with PCI-e). But intrestegly it has a special UTOPIA network processor. UTOPIA is actual a standard interface called *Universal Test and Operation PHY Interface for ATM*. It defines a full-duplex bus with seperate data and control lines for networks that use the ATM (Async Transfer Mode) standard. It enabled connecting ATM based network equipment. For example you could hook up multiple DSPs on one bus in a way that they will understand each other using ATM. In the case of our gateway product, this feature was not used. With this bus we could have a DSP connecting as a coprocessor to perform extra tasks to offload from the main processor and NPEs (network processing engines). The network processing engines have the capability to do AES and the now defunct MD5. 
 
 Exploring more toward the actually XScale core, we see it has a "super pipeline" with 7/8 stages,
 
@@ -87,33 +87,33 @@ Exploring more toward the actually XScale core, we see it has a "super pipeline"
 
 
 **Integer Pipe**
-Fetch 1
-Fetch 2
-Decode 
-Register File
-ALU Exec
-State Exec
-Integer write back
+1. Fetch 1
+2. Fetch 2
+3. Decode 
+4. Register File
+5. ALU Exec
+6. State Exec
+7. Integer write back
 
 **Memory Pipe**
-Fetch 1
-Fetch 2
-Decode 
-Register File
-DCache 1
-DCache 2
-DCache write back
+1. Fetch 1
+2. Fetch 2
+3. Decode 
+4. Register File
+5. DCache 1
+6. DCache 2
+7. DCache write back
 
 **MAC (Multiply-Accumulate) Pipe**
-Fetch 1
-Fetch 2
-Decode 
-Register File
-MAC 1
-MAC 2
-MAC 3
-MAC 4
-DCache Write Back
+1. Fetch 1
+2. Fetch 2
+3. Decode 
+4. Register File
+5. MAC 1
+6. MAC 2
+7. MAC 3
+8. MAC 4
+9. DCache Write Back
 
 **and no sight of an FPU!**. If you think about it when in networking do you encounter floating point numbers? Almost nowhere! It all surrounds integer math. Most of it is table lookups for routing, MAC addresses and ACLs. Or packet header manipulation. Everything there is of a fixed size. Pretty convenient.
 
@@ -127,27 +127,34 @@ I never knew intel every worked with ARM ISA's! Looking at the history it seems 
 This means our little processor represents an interesting era for Intel continuing to prove itself as THE industry leader of its time  That's pretty fucking cool in my opinion.
 
  Most importantly this XScale processor is supported to run OpenWRT a popular and flexible router operating system based on Linux. The foreshadowing is that I intend to use OpenWRT on this mother(board)-fucker. 
-## The WiFi Cards
+### The WiFi Cards
 ![[Pasted image 20251021194435.png]]
 These also have an interesting story. Today I found out that Ubiquity used to make expansion cards. These two lil dudes are wireless cards that operate on the 802.11g standard which like a lot of these components is older than me.  The two cards are the (from left to right):
 
-[**XR2 by Ubiquiti Networks** a 2.4Ghz radio running at 600mW ](https://store.ui.com/us/en/category/accessory-tech-radio-module/products/xr?variant=xr2)
-[**XR5 by Uiquiti Networks** a 5Ghz radio also running at 600mW](https://store.ui.com/us/en/category/accessory-tech-radio-module/products/xr?variant=xr5)
+- [**XR2 by Ubiquiti Networks** a 2.4Ghz radio running at 600mW ](https://store.ui.com/us/en/category/accessory-tech-radio-module/products/xr?variant=xr2)
+- [**XR5 by Uiquiti Networks** a 5Ghz radio also running at 600mW](https://store.ui.com/us/en/category/accessory-tech-radio-module/products/xr?variant=xr5)
 
 Surprisingly still sold by Ubiquity Networks. 
 
 Also thankfully these modules are ran by the Atheros AR5414 chipset which has drivers for OpenWRT! 
 
-## Firmware
+### Firmware
 Helping to perform updates and load kernels is the RedBoot boot loader. This bootloader is a little special because it contains a super small file and simple transfer protocol implementation called the Trivial File Transfer Protocol, which is small enough to fit in a bootloader to drive updates over network interfaces. [TFTP](https://en.wikipedia.org/wiki/Trivial_File_Transfer_Protocol)
 
 > TFTP is not used anywhere anymore...
 
-I did not want to deal with setting up networking to access a shell so I decided to connect over the RS232 port to get serial shell access to the board. This took me ages to do because I needed to put together a RS232 harness and my solder skills are shoty. In the end I used the serial port from the ol' build machine that we have setup in the design team's workspace. Worked without any issues.
+I did not want to deal with setting up networking to access a shell so I decided to connect over the RS232 port to get serial shell access to the board. This took me ages to do because I needed to put together a RS232 harness and my solder skills are shoddy. In the end I used the serial port from the ol' build machine that we have setup in the design team's workspace. Worked without any issues.
 ![[IMG_2537.jpg]]
 Using a serial monitor like PuTTy we connect to at 115200 baud (a lucky guess) and press the reset button on the board and we get bootloader, oh yeahhhhhh!
 ![[Pasted image 20251017192529.png]]
-## Kernel No Space for Modern OpenWRT
+Having worked with scripts to load firmware and custom tooling for firmware loading, loading binaries on this guy seemed way too easy. I just slapped an Ethernet cable between the SBC and my PC and started a TFTP server on the PC. I just had to call `load` with the IP of the PC, the name of the binary and where in RAM (or Flash) I want to load the binary.
+
+Lets see if we can get Linux, or specifically OpenWRT to run on this board. 
+## No Space!?
+
+Here's the first challenge with the firmware, and its more of a limitation placed by the hardware. This board has so little RAM and Flash that there is no way it would fit a modern OpenWRT implementation. Even though modern OpenWRT does support older chipsets like the XScale processors, it does depend on how much space these devices have. 
+
+OpenWRT 24.10 a recent release takes up 2.9 Megabytes for the kernal and another 3.3 Megabyte for the root file system, 
 
 ## Making Space on the Flash
 
