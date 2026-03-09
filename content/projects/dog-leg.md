@@ -164,4 +164,13 @@ OpenWRT 24.10 a recent release takes up 2.9 Megabytes for the kernal and another
 ## Luci Config
 
 
+## Previous Competition Sites
 
+# Upgrading to a PI 5
+## Install OpenWRT 
+We are going to use the SquashFS file system for more robust operation since the root file system is read only, an overlay file system is created, in case of corruption the root file system remains untouched, and only the overlay is messed up allowing for recovery.
+
+
+
+# Validating a System (for noobs by noobs)
+As the great engineers/scientists that we are we must validate our system before we poor our money (and most precious of all our time, energy, and still existing strands of hair). As such the next cha
