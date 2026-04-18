@@ -14,3 +14,7 @@ Occasionally I'll catch myself doing some projects on higher level systems, writ
 If you want to chat about embedded systems or collaborate on something interesting, feel free to reach out.
 
 Also, I love grilled cheese.
+
+## Interactive tools
+
+- [[projects/balanced-tree-workbench|Balanced Tree Workbench]]
