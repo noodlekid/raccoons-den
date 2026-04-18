@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Balanced Tree Workbench</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --color-background-primary: #faf8f8;
+        --color-background-secondary: #f2efef;
+        --color-text-primary: #2b2b2b;
+        --color-text-secondary: #4e4e4e;
+        --color-text-tertiary: #8a8a8a;
+        --color-text-success: #1f7a4f;
+        --color-text-danger: #b3261e;
+        --border-radius-md: 8px;
+        --border-radius-lg: 12px;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --color-background-primary: #161618;
+          --color-background-secondary: #202024;
+          --color-text-primary: #ebebec;
+          --color-text-secondary: #b8b8b8;
+          --color-text-tertiary: #909090;
+          --color-text-success: #4fd08b;
+          --color-text-danger: #ff6d66;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 16px;
+        font-family: "Source Sans Pro", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: var(--color-background-primary);
+        color: var(--color-text-primary);
+      }
+
+      button,
+      input {
+        border-radius: 8px;
+        border: 1px solid color-mix(in srgb, var(--color-text-secondary) 28%, transparent);
+        padding: 6px 10px;
+        background: var(--color-background-primary);
+        color: var(--color-text-primary);
+        font: inherit;
+      }
+
+      button {
+        cursor: pointer;
+      }
+
+      button:hover {
+        filter: brightness(0.98);
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h2 class="sr-only">Interactive workbench for red-black, AVL, and scapegoat trees with live invariant checking</h2>
+
+    <div style="padding: 1rem 0;">
+      <div id="type-tabs" style="display: flex; gap: 2px; margin-bottom: 12px; background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 3px;">
+        <button data-type="rb" style="flex: 1; padding: 7px 12px; font-size: 13px; border: none; background: var(--color-background-primary); border-radius: 6px; cursor: pointer; color: var(--color-text-primary); font-weight: 500;">Red-black</button>
+        <button data-type="avl" style="flex: 1; padding: 7px 12px; font-size: 13px; border: none; background: transparent; border-radius: 6px; cursor: pointer; color: var(--color-text-secondary);">AVL</button>
+        <button data-type="sg" style="flex: 1; padding: 7px 12px; font-size: 13px; border: none; background: transparent; border-radius: 6px; cursor: pointer; color: var(--color-text-secondary);">Scapegoat</button>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; align-items: center;">
+        <input id="val-input" type="number" placeholder="value" style="width: 100px;" />
+        <button id="insert-btn">Insert</button>
+        <button id="delete-btn">Delete</button>
+        <button id="random-btn">Random</button>
+        <button id="solve-btn">Solve</button>
+        <button id="clear-btn">Clear</button>
+      </div>
+
+      <div id="context-bar" style="display: none; gap: 6px; margin-bottom: 10px; padding: 8px 12px; background: var(--color-background-secondary); border-radius: var(--border-radius-md); align-items: center; flex-wrap: wrap;">
+        <span id="context-label" style="font-size: 13px; color: var(--color-text-secondary); margin-right: 4px;">Selected</span>
+        <button id="rot-l" style="padding: 4px 10px; font-size: 12px;">Rotate left</button>
+        <button id="rot-r" style="padding: 4px 10px; font-size: 12px;">Rotate right</button>
+        <button id="toggle-color" style="padding: 4px 10px; font-size: 12px; display: none;">Toggle color</button>
+        <button id="del-sel" style="padding: 4px 10px; font-size: 12px;">Delete</button>
+        <button id="deselect" style="padding: 4px 10px; font-size: 12px; margin-left: auto;">Close</button>
+      </div>
+
+      <div id="alpha-control" style="display: none; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 13px; padding: 2px 8px;">
+        <label style="color: var(--color-text-secondary);">Threshold α</label>
+        <input type="range" id="alpha-slider" min="0.55" max="0.95" step="0.01" value="0.67" style="flex: 1;" />
+        <span id="alpha-val" style="min-width: 36px; font-weight: 500; text-align: right;">0.67</span>
+      </div>
+
+      <div id="canvas-wrap" style="background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 16px; margin-bottom: 12px; overflow: auto; min-height: 260px; position: relative;">
+        <svg id="tree-svg" width="620" height="260" style="display: block; margin: 0 auto;"></svg>
+        <div id="empty-state" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--color-text-tertiary); font-size: 14px; pointer-events: none;">Insert a value or press Random to begin</div>
+      </div>
+
+      <div id="invariants" style="background: var(--color-background-secondary); border-radius: var(--border-radius-lg); padding: 12px 16px;">
+        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+          <span id="status-dot" style="width: 10px; height: 10px; border-radius: 50%; background: var(--color-text-tertiary); flex-shrink: 0;"></span>
+          <span id="status-text" style="font-weight: 500; font-size: 14px;">No tree</span>
+          <span id="status-hint" style="font-size: 12px; color: var(--color-text-tertiary); margin-left: auto;"></span>
+        </div>
+        <div id="invariant-list" style="display: flex; flex-direction: column; gap: 6px; font-size: 13px;"></div>
+      </div>
+    </div>
+
+    <script>
+      (() => {
+        const NODE_R = 18;
+        const X_SP = 44;
+        const Y_SP = 64;
+        const NS = 'http://www.w3.org/2000/svg';
+
+        let nextId = 0;
+        class TNode {
+          constructor(v) {
+            this.value = v;
+            this.left = null;
+            this.right = null;
+            this.parent = null;
+            this.color = 'red';
+            this.id = ++nextId;
+            this.x = 0;
+            this.y = 0;
+            this.vx = 0;
+            this.vy = 0;
+            this.tx = 0;
+            this.ty = 0;
+            this.fresh = true;
+          }
+        }
+
+        const state = { type: 'rb', root: null, alpha: 0.67, selectedId: null, solving: false };
+
+        function iter(n, fn) { if (!n) return; fn(n); iter(n.left, fn); iter(n.right, fn); }
+        function all() { const a = []; iter(state.root, n => a.push(n)); return a; }
+        function byId(id) { return all().find(n => n.id === id); }
+        function find(v) { let n = state.root; while (n) { if (v === n.value) return n; n = v < n.value ? n.left : n.right; } return null; }
+        function size(n) { return n ? 1 + size(n.left) + size(n.right) : 0; }
+        function heightOf(n) { return n ? 1 + Math.max(heightOf(n.left), heightOf(n.right)) : 0; }
+
+        function insert(v) {
+          if (find(v) !== null) return null;
+          const node = new TNode(v);
+          if (!state.root) { node.color = 'black'; state.root = node; return node; }
+          let cur = state.root;
+          while (true) {
+            if (v < cur.value) { if (!cur.left) { cur.left = node; node.parent = cur; return node; } cur = cur.left; }
+            else { if (!cur.right) { cur.right = node; node.parent = cur; return node; } cur = cur.right; }
+          }
+        }
+
+        function transplant(u, v) {
+          if (!u.parent) state.root = v;
+          else if (u.parent.left === u) u.parent.left = v;
+          else u.parent.right = v;
+          if (v) v.parent = u.parent;
+        }
+
+        function removeNode(n) {
+          if (!n.left) transplant(n, n.right);
+          else if (!n.right) transplant(n, n.left);
+          else {
+            let s = n.right; while (s.left) s = s.left;
+            n.value = s.value;
+            removeNode(s);
+          }
+        }
+
+        function removeValue(v) {
+          const n = find(v); if (!n) return false;
+          removeNode(n); return true;
+        }
+
+        function sleep(ms) {
+          return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function valuesSorted() {
+          return all().map(n => n.value).sort((a, b) => a - b);
+        }
+
+        function rebalanceParents(n, p = null) {
+          if (!n) return;
+          n.parent = p;
+          rebalanceParents(n.left, n);
+          rebalanceParents(n.right, n);
+        }
+
+        function setSolving(on) {
+          state.solving = on;
+          document.querySelectorAll('button, input').forEach(el => {
+            if (el.id === 'status-hint' || el.id === 'status-text') return;
+            el.disabled = on;
+          });
+          document.getElementById('solve-btn').textContent = on ? 'Solving…' : 'Solve';
+        }
+
+        function makeNode(v, color = 'black') {
+          const n = new TNode(v);
+          n.color = color;
+          return n;
+        }
+
+        function buildBalancedBST(sorted, lo = 0, hi = sorted.length - 1) {
+          if (lo > hi) return null;
+          const mid = Math.floor((lo + hi) / 2);
+          const root = makeNode(sorted[mid], 'black');
+          root.left = buildBalancedBST(sorted, lo, mid - 1);
+          root.right = buildBalancedBST(sorted, mid + 1, hi);
+          rebalanceParents(root, null);
+          return root;
+        }
+
+        function rbRotL(root, x) {
+          const y = x.right;
+          x.right = y.left;
+          if (y.left) y.left.parent = x;
+          y.parent = x.parent;
+          if (!x.parent) root = y;
+          else if (x === x.parent.left) x.parent.left = y;
+          else x.parent.right = y;
+          y.left = x;
+          x.parent = y;
+          return root;
+        }
+
+        function rbRotR(root, x) {
+          const y = x.left;
+          x.left = y.right;
+          if (y.right) y.right.parent = x;
+          y.parent = x.parent;
+          if (!x.parent) root = y;
+          else if (x === x.parent.right) x.parent.right = y;
+          else x.parent.left = y;
+          y.right = x;
+          x.parent = y;
+          return root;
+        }
+
+        function rbInsert(root, value) {
+          const z = makeNode(value, 'red');
+          let y = null;
+          let x = root;
+          while (x) {
+            y = x;
+            x = value < x.value ? x.left : x.right;
+          }
+          z.parent = y;
+          if (!y) root = z;
+          else if (value < y.value) y.left = z;
+          else y.right = z;
+
+          let cur = z;
+          while (cur.parent && cur.parent.color === 'red') {
+            const gp = cur.parent.parent;
+            if (!gp) break;
+            if (cur.parent === gp.left) {
+              const uncle = gp.right;
+              if (uncle && uncle.color === 'red') {
+                cur.parent.color = 'black';
+                uncle.color = 'black';
+                gp.color = 'red';
+                cur = gp;
+              } else {
+                if (cur === cur.parent.right) {
+                  cur = cur.parent;
+                  root = rbRotL(root, cur);
+                }
+                cur.parent.color = 'black';
+                gp.color = 'red';
+                root = rbRotR(root, gp);
+              }
+            } else {
+              const uncle = gp.left;
+              if (uncle && uncle.color === 'red') {
+                cur.parent.color = 'black';
+                uncle.color = 'black';
+                gp.color = 'red';
+                cur = gp;
+              } else {
+                if (cur === cur.parent.left) {
+                  cur = cur.parent;
+                  root = rbRotR(root, cur);
+                }
+                cur.parent.color = 'black';
+                gp.color = 'red';
+                root = rbRotL(root, gp);
+              }
+            }
+          }
+          if (root) root.color = 'black';
+          return root;
+        }
+
+        function buildSolvedRoot(values, type) {
+          if (!values.length) return null;
+          if (type === 'rb') {
+            let root = null;
+            for (const v of values) root = rbInsert(root, v);
+            if (root) root.color = 'black';
+            return root;
+          }
+          return buildBalancedBST(values);
+        }
+
+        async function animateSolve() {
+          if (state.solving || !state.root) return;
+          const vals = valuesSorted();
+          if (!vals.length) return;
+          setSolving(true);
+          state.selectedId = null;
+          try {
+            for (let i = 1; i <= vals.length; i++) {
+              const partial = vals.slice(0, i);
+              state.root = buildSolvedRoot(partial, state.type);
+              update();
+              await sleep(200);
+            }
+            state.root = buildSolvedRoot(vals, state.type);
+            update();
+          } finally {
+            setSolving(false);
+          }
+        }
+
+        function rotL(n) {
+          const r = n.right; if (!r) return false;
+          n.right = r.left; if (r.left) r.left.parent = n;
+          r.parent = n.parent;
+          if (!n.parent) state.root = r;
+          else if (n.parent.left === n) n.parent.left = r;
+          else n.parent.right = r;
+          r.left = n; n.parent = r; return true;
+        }
+
+        function rotR(n) {
+          const l = n.left; if (!l) return false;
+          n.left = l.right; if (l.right) l.right.parent = n;
+          l.parent = n.parent;
+          if (!n.parent) state.root = l;
+          else if (n.parent.left === n) n.parent.left = l;
+          else n.parent.right = l;
+          l.right = n; n.parent = l; return true;
+        }
+
+        function bstCheck(n, lo, hi) {
+          if (!n) return { ok: true };
+          if (n.value <= lo || n.value >= hi) return { ok: false, node: n };
+          const L = bstCheck(n.left, lo, n.value);
+          if (!L.ok) return L;
+          return bstCheck(n.right, n.value, hi);
+        }
+
+        function checkRB(root) {
+          const bad = new Set();
+          const bst = bstCheck(root, -Infinity, Infinity);
+          if (!bst.ok) bad.add(bst.node.id);
+          const rootBlack = root.color === 'black';
+          let rrOk = true;
+          iter(root, n => {
+            if (n.color === 'red') {
+              if (n.left && n.left.color === 'red') { rrOk = false; bad.add(n.id); bad.add(n.left.id); }
+              if (n.right && n.right.color === 'red') { rrOk = false; bad.add(n.id); bad.add(n.right.id); }
+            }
+          });
+          let bhOk = true;
+          const bhBad = new Set();
+          function bh(n) {
+            if (!n) return 1;
+            const L = bh(n.left), R = bh(n.right);
+            if (L < 0 || R < 0 || L !== R) { bhBad.add(n.id); return -1; }
+            return (n.color === 'black' ? 1 : 0) + L;
+          }
+          if (bh(root) < 0) { bhOk = false; bhBad.forEach(id => bad.add(id)); }
+          return {
+            items: [
+              { label: 'Binary search tree property', ok: bst.ok },
+              { label: 'Root is black', ok: rootBlack },
+              { label: 'No red node has a red child', ok: rrOk },
+              { label: 'All paths have equal black height', ok: bhOk },
+            ], violators: bad
+          };
+        }
+
+        function checkAVL(root) {
+          const bad = new Set();
+          const bst = bstCheck(root, -Infinity, Infinity);
+          if (!bst.ok) bad.add(bst.node.id);
+          let ok = true;
+          iter(root, n => {
+            const bf = heightOf(n.left) - heightOf(n.right);
+            n._bf = bf;
+            if (Math.abs(bf) > 1) { ok = false; bad.add(n.id); }
+          });
+          return {
+            items: [
+              { label: 'Binary search tree property', ok: bst.ok },
+              { label: 'Every balance factor is −1, 0, or +1', ok },
+            ], violators: bad
+          };
+        }
+
+        function checkSG(root) {
+          const bad = new Set();
+          const bst = bstCheck(root, -Infinity, Infinity);
+          if (!bst.ok) bad.add(bst.node.id);
+          let ok = true;
+          iter(root, n => {
+            const ls = size(n.left), rs = size(n.right), tot = 1 + ls + rs;
+            n._size = tot;
+            if (Math.max(ls, rs) > state.alpha * tot) { ok = false; bad.add(n.id); }
+          });
+          return {
+            items: [
+              { label: 'Binary search tree property', ok: bst.ok },
+              { label: `Every node is α-weight-balanced (α = ${state.alpha.toFixed(2)})`, ok },
+            ], violators: bad
+          };
+        }
+
+        function getInv() {
+          if (!state.root) return { items: [], violators: new Set() };
+          if (state.type === 'rb') return checkRB(state.root);
+          if (state.type === 'avl') return checkAVL(state.root);
+          return checkSG(state.root);
+        }
+
+        function layout() {
+          if (!state.root) {
+            document.getElementById('tree-svg').setAttribute('height', 260);
+            document.getElementById('tree-svg').setAttribute('width', 620);
+            return;
+          }
+          let idx = 0;
+          const items = [];
+          (function go(n, d) {
+            if (!n) return;
+            go(n.left, d + 1);
+            items.push({ n, i: idx++, d });
+            go(n.right, d + 1);
+          })(state.root, 0);
+          const count = items.length;
+          const maxD = Math.max(...items.map(x => x.d));
+          const width = Math.max(620, count * X_SP + 48);
+          const height = Math.max(260, (maxD + 1) * Y_SP + 64);
+          const svg = document.getElementById('tree-svg');
+          svg.setAttribute('width', width);
+          svg.setAttribute('height', height);
+          const total = count * X_SP;
+          const offset = (width - total) / 2;
+          for (const { n, i, d } of items) {
+            n.tx = offset + (i + 0.5) * X_SP;
+            n.ty = 32 + d * Y_SP;
+          }
+          const q = [state.root];
+          while (q.length) {
+            const n = q.shift();
+            if (!n) continue;
+            if (n.fresh) {
+              if (n.parent) { n.x = n.parent.x; n.y = n.parent.y; }
+              else { n.x = n.tx; n.y = n.ty; }
+              n.fresh = false;
+            }
+            q.push(n.left); q.push(n.right);
+          }
+        }
+
+        const svg = document.getElementById('tree-svg');
+        let edgesG, nodesG;
+        const nodeEls = new Map();
+        const edgeEls = new Map();
+
+        function resetSVG() {
+          svg.innerHTML = '';
+          edgesG = document.createElementNS(NS, 'g');
+          nodesG = document.createElementNS(NS, 'g');
+          svg.appendChild(edgesG); svg.appendChild(nodesG);
+          nodeEls.clear(); edgeEls.clear();
+        }
+
+        function rebuild() {
+          resetSVG();
+          const inv = getInv();
+          for (const n of all()) {
+            if (n.parent) {
+              const line = document.createElementNS(NS, 'line');
+              line.setAttribute('stroke', '#B4B2A9');
+              line.setAttribute('stroke-width', '1.5');
+              line.setAttribute('stroke-linecap', 'round');
+              edgesG.appendChild(line);
+              edgeEls.set(n.id, line);
+            }
+          }
+          for (const n of all()) {
+            const g = document.createElementNS(NS, 'g');
+            g.style.cursor = 'pointer';
+            g.dataset.id = n.id;
+
+            const halo = document.createElementNS(NS, 'circle');
+            halo.setAttribute('r', NODE_R + 5);
+            halo.setAttribute('fill', 'none');
+            halo.setAttribute('stroke', '#378ADD');
+            halo.setAttribute('stroke-width', '1.5');
+            halo.setAttribute('stroke-dasharray', '3 3');
+            halo.style.display = 'none';
+            g.appendChild(halo);
+
+            const c = document.createElementNS(NS, 'circle');
+            c.setAttribute('r', NODE_R);
+            g.appendChild(c);
+
+            const t = document.createElementNS(NS, 'text');
+            t.setAttribute('text-anchor', 'middle');
+            t.setAttribute('dominant-baseline', 'central');
+            t.setAttribute('font-size', '13');
+            t.setAttribute('font-weight', '500');
+            t.style.pointerEvents = 'none';
+            t.textContent = n.value;
+            g.appendChild(t);
+
+            const s = document.createElementNS(NS, 'text');
+            s.setAttribute('text-anchor', 'middle');
+            s.setAttribute('font-size', '10');
+            s.setAttribute('y', NODE_R + 12);
+            s.style.pointerEvents = 'none';
+            g.appendChild(s);
+
+            g.addEventListener('click', (e) => { e.stopPropagation(); select(n.id); });
+            nodesG.appendChild(g);
+            nodeEls.set(n.id, { g, c, t, s, halo });
+          }
+          paint(inv);
+        }
+
+        function paint(inv) {
+          for (const n of all()) {
+            const el = nodeEls.get(n.id); if (!el) continue;
+            const sel = state.selectedId === n.id;
+            const bad = inv.violators.has(n.id);
+            let fill, stroke, txt;
+            if (state.type === 'rb') {
+              if (n.color === 'red') { fill = '#FCEBEB'; stroke = '#E24B4A'; txt = '#791F1F'; }
+              else { fill = '#2C2C2A'; stroke = '#2C2C2A'; txt = '#F1EFE8'; }
+            } else {
+              fill = 'var(--color-background-primary)'; stroke = '#888780'; txt = 'var(--color-text-primary)';
+            }
+            el.c.setAttribute('fill', fill);
+            if (bad) { el.c.setAttribute('stroke', '#E24B4A'); el.c.setAttribute('stroke-width', '3'); }
+            else { el.c.setAttribute('stroke', stroke); el.c.setAttribute('stroke-width', '1.5'); }
+            el.t.setAttribute('fill', txt);
+            el.halo.style.display = sel ? 'block' : 'none';
+            if (state.type === 'avl' && typeof n._bf === 'number') {
+              el.s.textContent = (n._bf >= 0 ? '+' : '') + n._bf;
+              el.s.setAttribute('fill', Math.abs(n._bf) > 1 ? '#A32D2D' : '#888780');
+            } else if (state.type === 'sg' && typeof n._size === 'number') {
+              el.s.textContent = n._size;
+              el.s.setAttribute('fill', bad ? '#A32D2D' : '#888780');
+            } else { el.s.textContent = ''; }
+          }
+        }
+
+        function frame() {
+          for (const n of all()) {
+            const el = nodeEls.get(n.id);
+            if (el) el.g.setAttribute('transform', `translate(${n.x.toFixed(2)}, ${n.y.toFixed(2)})`);
+            if (n.parent) {
+              const line = edgeEls.get(n.id);
+              if (line) {
+                line.setAttribute('x1', n.parent.x.toFixed(2));
+                line.setAttribute('y1', n.parent.y.toFixed(2));
+                line.setAttribute('x2', n.x.toFixed(2));
+                line.setAttribute('y2', n.y.toFixed(2));
+              }
+            }
+          }
+        }
+
+        let animOn = false;
+        function tick() {
+          let moving = false;
+          for (const n of all()) {
+            const dx = n.tx - n.x, dy = n.ty - n.y;
+            if (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05 || Math.abs(n.vx) > 0.05 || Math.abs(n.vy) > 0.05) moving = true;
+            n.vx = n.vx * 0.72 + dx * 0.12;
+            n.vy = n.vy * 0.72 + dy * 0.12;
+            n.x += n.vx; n.y += n.vy;
+          }
+          frame();
+          if (moving) requestAnimationFrame(tick); else animOn = false;
+        }
+        function startAnim() { if (!animOn) { animOn = true; requestAnimationFrame(tick); } }
+
+        function renderInv() {
+          const inv = getInv();
+          const list = document.getElementById('invariant-list');
+          const dot = document.getElementById('status-dot');
+          const txt = document.getElementById('status-text');
+          const hint = document.getElementById('status-hint');
+          list.innerHTML = '';
+          if (!state.root) {
+            dot.style.background = 'var(--color-text-tertiary)';
+            txt.textContent = 'Empty tree';
+            txt.style.color = 'var(--color-text-primary)';
+            hint.textContent = ''; return;
+          }
+          const ok = inv.items.every(x => x.ok);
+          dot.style.background = ok ? 'var(--color-text-success)' : 'var(--color-text-danger)';
+          txt.textContent = ok ? 'All invariants satisfied' : 'Invariants violated';
+          txt.style.color = ok ? 'var(--color-text-success)' : 'var(--color-text-danger)';
+          const ct = all().length;
+          hint.textContent = `${ct} node${ct === 1 ? '' : 's'}`;
+          for (const item of inv.items) {
+            const row = document.createElement('div');
+            row.style.cssText = 'display: flex; align-items: center; gap: 8px;';
+            const d = document.createElement('span');
+            d.style.cssText = `width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; background: ${item.ok ? 'var(--color-text-success)' : 'var(--color-text-danger)'};`;
+            const l = document.createElement('span');
+            l.textContent = item.label;
+            l.style.color = item.ok ? 'var(--color-text-primary)' : 'var(--color-text-danger)';
+            row.append(d, l);
+            list.appendChild(row);
+          }
+        }
+
+        function updateEmpty() {
+          document.getElementById('empty-state').style.display = state.root ? 'none' : 'flex';
+        }
+
+        function updateContext() {
+          const bar = document.getElementById('context-bar');
+          const label = document.getElementById('context-label');
+          const toggle = document.getElementById('toggle-color');
+          if (state.selectedId == null) { bar.style.display = 'none'; return; }
+          const n = byId(state.selectedId);
+          if (!n) { state.selectedId = null; bar.style.display = 'none'; return; }
+          bar.style.display = 'flex';
+          label.textContent = `Selected ${n.value}`;
+          toggle.style.display = state.type === 'rb' ? 'inline-block' : 'none';
+        }
+
+        function update() {
+          layout(); rebuild(); renderInv(); updateEmpty(); updateContext(); startAnim();
+        }
+
+        function select(id) {
+          state.selectedId = state.selectedId === id ? null : id;
+          paint(getInv()); updateContext();
+        }
+        function deselect() { state.selectedId = null; paint(getInv()); updateContext(); }
+
+        document.getElementById('insert-btn').onclick = () => {
+          const i = document.getElementById('val-input');
+          const v = parseInt(i.value);
+          if (!isNaN(v)) { insert(v); i.value = ''; update(); }
+          i.focus();
+        };
+        document.getElementById('delete-btn').onclick = () => {
+          const i = document.getElementById('val-input');
+          const v = parseInt(i.value);
+          if (!isNaN(v)) { removeValue(v); i.value = ''; state.selectedId = null; update(); }
+          i.focus();
+        };
+        document.getElementById('random-btn').onclick = () => {
+          state.root = null; state.selectedId = null;
+          const n = 7 + Math.floor(Math.random() * 5);
+          const used = new Set();
+          while (used.size < n) used.add(Math.floor(Math.random() * 99) + 1);
+          for (const v of used) insert(v);
+          update();
+        };
+        document.getElementById('solve-btn').onclick = animateSolve;
+        document.getElementById('clear-btn').onclick = () => { state.root = null; state.selectedId = null; update(); };
+        document.getElementById('rot-l').onclick = () => { const n = byId(state.selectedId); if (n && rotL(n)) update(); };
+        document.getElementById('rot-r').onclick = () => { const n = byId(state.selectedId); if (n && rotR(n)) update(); };
+        document.getElementById('toggle-color').onclick = () => {
+          const n = byId(state.selectedId); if (n) { n.color = n.color === 'red' ? 'black' : 'red'; update(); }
+        };
+        document.getElementById('del-sel').onclick = () => {
+          const n = byId(state.selectedId); if (n) { state.selectedId = null; removeNode(n); update(); }
+        };
+        document.getElementById('deselect').onclick = deselect;
+        document.getElementById('val-input').addEventListener('keydown', e => {
+          if (e.key === 'Enter') document.getElementById('insert-btn').click();
+        });
+        document.querySelectorAll('#type-tabs button').forEach(b => {
+          b.onclick = () => {
+            state.type = b.dataset.type;
+            document.querySelectorAll('#type-tabs button').forEach(x => {
+              const active = x.dataset.type === state.type;
+              x.style.background = active ? 'var(--color-background-primary)' : 'transparent';
+              x.style.color = active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)';
+              x.style.fontWeight = active ? '500' : '400';
+            });
+            document.getElementById('alpha-control').style.display = state.type === 'sg' ? 'flex' : 'none';
+            update();
+          };
+        });
+        document.getElementById('alpha-slider').oninput = e => {
+          state.alpha = parseFloat(e.target.value);
+          document.getElementById('alpha-val').textContent = state.alpha.toFixed(2);
+          if (state.type === 'sg') { renderInv(); paint(getInv()); }
+        };
+        document.getElementById('canvas-wrap').onclick = deselect;
+
+        update();
+      })();
+    </script>
+  </body>
+</html>

@@ -56,6 +56,8 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
                 typeof node.properties.href === "string"
               ) {
                 let dest = node.properties.href as RelativeURL
+                const skipTransform =
+                  "data-no-transform" in node.properties || "data-router-ignore" in node.properties
                 const classes = (node.properties.className ?? []) as string[]
                 const isExternal = isAbsoluteUrl(dest)
                 classes.push(isExternal ? "external" : "internal")
@@ -100,7 +102,7 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
 
                 // don't process external links or intra-document anchors
                 const isInternal = !(isAbsoluteUrl(dest) || dest.startsWith("#"))
-                if (isInternal) {
+                if (isInternal && !skipTransform) {
                   dest = node.properties.href = transformLink(
                     file.data.slug!,
                     dest,
@@ -127,6 +129,7 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
                 if (
                   opts.prettyLinks &&
                   isInternal &&
+                  !skipTransform &&
                   node.children.length === 1 &&
                   node.children[0].type === "text" &&
                   !node.children[0].value.startsWith("#")
@@ -141,11 +144,13 @@ export const CrawlLinks: QuartzTransformerPlugin<Partial<Options>> = (userOpts) 
                 node.properties &&
                 typeof node.properties.src === "string"
               ) {
+                const skipTransform =
+                  "data-no-transform" in node.properties || "data-router-ignore" in node.properties
                 if (opts.lazyLoad) {
                   node.properties.loading = "lazy"
                 }
 
-                if (!isAbsoluteUrl(node.properties.src)) {
+                if (!isAbsoluteUrl(node.properties.src) && !skipTransform) {
                   let dest = node.properties.src as RelativeURL
                   dest = node.properties.src = transformLink(
                     file.data.slug!,
